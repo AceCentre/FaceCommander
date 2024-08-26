@@ -322,18 +322,15 @@ class Keybinder(metaclass=Singleton):
 
         for shape_name, v in (ConfigManager().mouse_bindings |
                               ConfigManager().keyboard_bindings).items():
-            if shape_name == "Eye blink":
-                # Replace this with the actual EAR detection method
-                val = FaceMesh().detect_eye_blink()  # This should be the EAR ratio or a similar value
-            else:
-                if shape_name not in shape_list.blendshape_names:
-                    continue
-    
-                device, action, threshold, mode = v
-                mode = Trigger(mode.lower())
-                # Get blendshape value
-                idx = shape_list.blendshape_indices[shape_name]
-                val = blendshape_values[idx]
+
+            if shape_name not in shape_list.blendshape_names:
+                continue
+
+            device, action, threshold, mode = v
+            mode = Trigger(mode.lower())
+            # Get blendshape value
+            idx = shape_list.blendshape_indices[shape_name]
+            val = blendshape_values[idx]
     
             if device == "meta":
                 self.meta_action(val, action, threshold, self.is_active.get())
