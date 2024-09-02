@@ -49,11 +49,6 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
         # Float UIs
         self.shared_info_balloon = Balloon(
             self, image_path="assets/images/balloon.png")
-        self.shared_dropdown = Dropdown(
-            self,
-            dropdown_items=shape_list.available_gestures,
-            width=DIV_WIDTH,
-            callback=self.dropdown_callback)
 
         self.help_icon = customtkinter.CTkImage(
             Image.open("assets/images/help.png").resize(HELP_ICON_SIZE),
@@ -75,8 +70,16 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
             Image.open("assets/images/bin.png").resize(BIN_ICON_SIZE),
             size=BIN_ICON_SIZE)
 
+        self.left_button_image = customtkinter.CTkImage(Image.open(
+            "assets/images/left.png").resize(A_BUTTON_SIZE),
+                                                            size=A_BUTTON_SIZE)
+
+        self.right_button_image = customtkinter.CTkImage(Image.open(
+            "assets/images/right.png").resize(A_BUTTON_SIZE),
+                                                            size=A_BUTTON_SIZE)
+
         self.wait_for_key_bind_id = None
-        self.next_empty_row = 0
+        self.next_empty_row = 7
         self.waiting_div = None
         self.waiting_button = None
         self.slider_dragging = False
@@ -110,12 +113,8 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
             div["volume_bar"].grid()
             div["trigger_dropdown"].grid()
             div["blink_threshold_slider"].grid_remove()
-            self.shared_dropdown.disable_item(gesture_name)
             self.divs[div_name] = div
-            self.next_empty_row += 1
-
-        self.shared_dropdown.refresh_items()
-        self.refresh_scrollbar()
+            break
 
     def add_blank_div(self):
         new_uuid = uuid.uuid1()
@@ -137,8 +136,6 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
             key_action=selected_key_action,
             gesture=selected_gesture)
         ConfigManager().apply_keyboard_bindings()
-        self.shared_dropdown.hide_dropdown()
-        self.shared_dropdown.enable_item(selected_gesture)
 
     def bin_button_callback(self, div_name, event):
         div = self.divs[div_name]
@@ -211,7 +208,6 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
                                            state="disabled")
         drop.grid(row=row, column=0, padx=PAD_X, pady=(64, 10), sticky="nw")
         drop.grid_remove()
-        self.shared_dropdown.register_widget(drop, div_name)
 
         # Label ?
         tips_label = customtkinter.CTkLabel(master=self,
@@ -472,8 +468,6 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
         div = self.divs[div_name]
 
         # Release old item
-        if div["selected_gesture"] != target_gesture:
-            self.shared_dropdown.enable_item(div["selected_gesture"])
         div["selected_gesture"] = target_gesture
         div["combobox"].set(target_gesture)
 
@@ -566,7 +560,7 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
         """Refresh the page divs to match the new profile
         """
         # Remove old divs
-        self.next_empty_row = 0
+        self.next_empty_row = 8
         for div_name, div in self.divs.items():
             self.remove_div(div_name)
         self.divs = {}
@@ -632,13 +626,35 @@ class PageKeyboard(SafeDisposableFrame):
                                      pady=5,
                                      sticky="nw")
 
+        # left binding button
+        self.left_binding_button = customtkinter.CTkButton(
+            master=self,
+            text="<<",
+            fg_color="white",
+            text_color=BLUE,
+            command=self.inner_frame.add_blank_div)
+        self.left_binding_button.grid(row=3,
+                                     column=0,
+                                     padx=5,
+                                     pady=5,
+                                     sticky="nw")
+
+        # right binding button
+        self.right_binding_button = customtkinter.CTkButton(
+            master=self,
+            text=">>",
+            fg_color="white",
+            text_color=BLUE,
+            command=self.inner_frame.add_blank_div)
+        self.right_binding_button.grid(row=3,
+                                     column=1,
+                                     padx=5,
+                                     pady=5,
+                                     sticky="nw")
+
     def enter(self):
         super().enter()
         self.inner_frame.enter()
-
-        # Hide dropdown when mouse leave the frame
-        self.bind_id_leave = self.bind(
-            "<Leave>", self.inner_frame.shared_dropdown.hide_dropdown)
 
     def refresh_profile(self):
         self.inner_frame.inner_refresh_profile()
@@ -647,8 +663,6 @@ class PageKeyboard(SafeDisposableFrame):
         super().leave()
         self.inner_frame.leave()
         self.unbind("<Leave>", self.bind_id_leave)
-
-        self.inner_frame.shared_dropdown.hide_dropdown()
 
     def destroy(self):
         super().destroy()
