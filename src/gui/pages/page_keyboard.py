@@ -11,6 +11,7 @@ from src.config_manager import ConfigManager
 from src.detectors import FaceMesh
 from src.gui.balloon import Balloon
 from src.gui.dropdown import Dropdown
+from src.gui.customdialog import CustomDialog
 from src.gui.frames.safe_disposable_frame import SafeDisposableFrame
 from src.gui.frames.safe_disposable_scrollable_frame import SafeDisposableScrollableFrame
 from src.utils.Trigger import Trigger
@@ -49,11 +50,12 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
         # Float UIs
         self.shared_info_balloon = Balloon(
             self, image_path="assets/images/balloon.png")
-        self.shared_dropdown = Dropdown(
-            self,
-            dropdown_items=shape_list.available_gestures,
-            width=DIV_WIDTH,
-            callback=self.dropdown_callback)
+        # self.shared_dropdown = Dropdown(
+        #     self,
+        #     dropdown_items=shape_list.available_gestures,
+        #     width=DIV_WIDTH,
+        #     callback=self.dropdown_callback)
+        self.shared_dialog = CustomDialog(self, shape_list.available_gestures, width=750, callback=self.dialog_callback)
 
         self.help_icon = customtkinter.CTkImage(
             Image.open("assets/images/help.png").resize(HELP_ICON_SIZE),
@@ -98,9 +100,9 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
             # Show elements related to gesture
             div["selected_gesture"] = gesture_name
             div["entry_field"].configure(image=self.blank_a_button_image)
-            div["combobox"].set(gesture_name)
+            # div["combobox"].set(gesture_name)
             div["slider"].set(int(bind_info[2] * 100))
-            div["combobox"].grid()
+            # div["combobox"].grid()
             div["tips_label"].grid()
             div["subtle_label"].grid()
             div["slider"].grid()
@@ -110,11 +112,11 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
             div["volume_bar"].grid()
             div["trigger_dropdown"].grid()
             div["blink_threshold_slider"].grid_remove()
-            self.shared_dropdown.disable_item(gesture_name)
+            # self.shared_dropdown.disable_item(gesture_name)
             self.divs[div_name] = div
             self.next_empty_row += 1
 
-        self.shared_dropdown.refresh_items()
+        # self.shared_dialog.refresh_items()
         self.refresh_scrollbar()
 
     def add_blank_div(self):
@@ -137,8 +139,8 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
             key_action=selected_key_action,
             gesture=selected_gesture)
         ConfigManager().apply_keyboard_bindings()
-        self.shared_dropdown.hide_dropdown()
-        self.shared_dropdown.enable_item(selected_gesture)
+        # self.shared_dropdown.hide_dropdown()
+        # self.shared_dropdown.enable_item(selected_gesture)
 
     def bin_button_callback(self, div_name, event):
         div = self.divs[div_name]
@@ -202,16 +204,26 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
                          padx=PAD_X,
                          pady=(10, 10),
                          sticky="nw")
+        # Use CustomDialog for dropdown functionality
+        button = customtkinter.CTkButton(
+            master=self,
+            text=gesture_name,
+            command=partial(self.open_custom_dialog, div_name),
+            width=DIV_WIDTH,
+            fg_color='lightblue'
+        )   
+        button.grid(row=row, column=0, padx=PAD_X, pady=(64, 10), sticky="nw")
 
-        # Combobox
-        drop = customtkinter.CTkOptionMenu(master=self,
-                                           values=[gesture_name],
-                                           width=DIV_WIDTH,
-                                           dynamic_resizing=False,
-                                           state="disabled")
-        drop.grid(row=row, column=0, padx=PAD_X, pady=(64, 10), sticky="nw")
-        drop.grid_remove()
-        self.shared_dropdown.register_widget(drop, div_name)
+        # # Combobox
+        # drop = customtkinter.CTkOptionMenu(master=self,
+        #                                    values=[gesture_name],
+        #                                    width=DIV_WIDTH,
+        #                                    dynamic_resizing=False,
+        #                                    state="disabled")
+        # drop.grid(row=row, column=0, padx=PAD_X, pady=(64, 10), sticky="nw")
+        # # drop.grid_remove()
+        # self.shared_dropdown.register_widget(drop, div_name)
+        
 
         # Label ?
         tips_label = customtkinter.CTkLabel(master=self,
@@ -352,7 +364,7 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
 
         return {
             "entry_field": entry_field,
-            "combobox": drop,
+            "gesture_button": button,
             "tips_label": tips_label,
             "slider": slider,
             "timer_slider": timer_slider,
@@ -365,7 +377,51 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
             "trigger_dropdown": trigger_dropdown,
             "blink_threshold_slider": blink_threshold_slider
         }
+    def open_custom_dialog(self, div_name):
+        # Open custom dialog and set callback for selection
+        self.shared_dialog.open(div_name)
+        
+    def dialog_callback(self, div_name, target_gesture):
+        """Callback function when an item is selected in the custom dialog."""
+        # print(f"Selected item for {div_name}: {selected_item}")
+        # Update any UI or logic based on selected item
+        # Update the button text or any other action needed
+        
 
+        div = self.divs[div_name]
+
+        # # Release old item
+        # if div["selected_gesture"] != target_gesture:
+        #     self.shared_dropdown.enable_item(div["selected_gesture"])
+        div["selected_gesture"] = target_gesture
+        div["gesture_button"].configure(text=target_gesture)
+        # div["gesture_button"].set(target_gesture)
+
+        # Show or hide blink threshold slider based on the selected gesture
+        if "blink" in target_gesture: # Change this to the appropriate gesture name
+            div["timer_slider"].grid()  # Show the slider
+            div["timer_label"].grid()
+        else:
+            div["timer_slider"].grid_remove()  # Hide the slider
+            div["timer_label"].grid_remove()
+    
+
+        if target_gesture != "None":
+            div["slider"].grid()
+            div["volume_bar"].grid()
+            div["tips_label"].grid()
+            div["subtle_label"].grid()
+            div["trigger_dropdown"].grid()
+        else:
+            div["slider"].grid_remove()
+            div["volume_bar"].grid_remove()
+            div["tips_label"].grid_remove()
+            div["subtle_label"].grid_remove()
+            div["trigger_dropdown"].grid_remove()
+
+        self.set_new_keyboard_binding(div)
+        self.refresh_scrollbar()        
+        
     def set_new_keyboard_binding(self, div):
 
         # Remove keybind if set to invalid key
@@ -417,7 +473,7 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
             entry_button.configure(image=self.a_button_image)
             div["selected_key_action"] = "None"
             div["slider"].grid_remove()
-            div["combobox"].grid_remove()
+            # div["combobox"].grid_remove()
             div["volume_bar"].grid_remove()
             div["tips_label"].grid_remove()
             div["subtle_label"].grid_remove()
@@ -433,12 +489,12 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
             entry_button.configure(text=pydirectinput_key)
             entry_button.configure(image=self.blank_a_button_image)
 
-            div["combobox"].grid()
+            # div["combobox"].grid()
             div["selected_key_action"] = pydirectinput_key
             self.set_new_keyboard_binding(div)
             if div["selected_gesture"] != "None":
                 div["slider"].grid()
-                div["combobox"].grid()
+                # div["combobox"].grid()
                 div["volume_bar"].grid()
                 div["tips_label"].grid()
                 div["subtle_label"].grid()
@@ -637,8 +693,8 @@ class PageKeyboard(SafeDisposableFrame):
         self.inner_frame.enter()
 
         # Hide dropdown when mouse leave the frame
-        self.bind_id_leave = self.bind(
-            "<Leave>", self.inner_frame.shared_dropdown.hide_dropdown)
+        # self.bind_id_leave = self.bind(
+        #     "<Leave>", self.inner_frame.shared_dropdown.hide_dropdown)
 
     def refresh_profile(self):
         self.inner_frame.inner_refresh_profile()
@@ -648,7 +704,7 @@ class PageKeyboard(SafeDisposableFrame):
         self.inner_frame.leave()
         self.unbind("<Leave>", self.bind_id_leave)
 
-        self.inner_frame.shared_dropdown.hide_dropdown()
+        # self.inner_frame.shared_dropdown.hide_dropdown()
 
     def destroy(self):
         super().destroy()
