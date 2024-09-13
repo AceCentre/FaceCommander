@@ -74,6 +74,8 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
 
         self.wait_for_key_bind_id = None
         self.next_empty_row = 0
+        self.next_empty_column = 0
+        self.max_columns = 4
         self.waiting_div = None
         self.waiting_button = None
         self.slider_dragging = False
@@ -83,15 +85,19 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
         self.divs = {}
         self.load_initial_keybindings()
 
+        self.bind("<Configure>", self.on_resize)
+
     def load_initial_keybindings(self):
         """Load default from config and set the UI
         """
         
-        for gesture_name, bind_info in ConfigManager().keyboard_bindings.items(
-        ):
-            div_name = f"div_{self.next_empty_row}"
-
-            div = self.create_div(self.next_empty_row, div_name, gesture_name,
+        for idx, (gesture_name, bind_info) in enumerate(ConfigManager().keyboard_bindings.items()):
+            div_name = f"div_{self.next_empty_row}_{self.next_empty_column}"
+            new_uuid = uuid.uuid1()
+            div_name = f"div_{new_uuid}"
+            self.next_empty_row = idx // self.max_columns
+            self.next_empty_column = idx % self.max_columns
+            div = self.create_div(self.next_empty_row, self.next_empty_column,  div_name, gesture_name,
                                   bind_info)
 
             # Show elements related to gesture
@@ -108,21 +114,60 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
             div["trigger_dropdown"].grid()
             div["blink_threshold_slider"].grid_remove()
             self.divs[div_name] = div
-            self.next_empty_row += 1
+            # self.next_empty_row += 1
 
         self.refresh_scrollbar()
+    def on_resize(self, event):
+        dialog_width = self.winfo_width()
+        if dialog_width > 1200:
+            self.max_columns = 4
+        elif dialog_width > 900:
+            self.max_columns = 3
+        elif dialog_width > 600:
+            self.max_columns = 2
+        else:
+            self.max_columns = 1        
+        self.update_grid(self.max_columns)
+        self.refresh_scrollbar()
 
+    def refresh_div(self,):
+        for idx, div_name in enumerate(self.divs):
+            row = idx // self.max_columns
+            column = idx % self.max_columns
+            self.divs[div_name]["entry_field"].grid(row=row, column=column)
+            self.divs[div_name]["gesture_button"].grid(row=row, column=column)
+            self.divs[div_name]["tips_label"].grid(row=row, column=column)
+            self.divs[div_name]["slider"].grid(row=row, column=column)
+            if 'blink' in self.divs[div_name]["selected_gesture"]:
+                self.divs[div_name]["timer_slider"].grid(row=row, column=column)
+                self.divs[div_name]["timer_label"].grid(row=row, column=column)
+            self.divs[div_name]["volume_bar"].grid(row=row, column=column)
+            self.divs[div_name]["subtle_label"].grid(row=row, column=column)
+            self.divs[div_name]["remove_button"].grid(row=row, column=column)
+            self.divs[div_name]["trigger_dropdown"].grid(row=row, column=column)
+        self.refresh_scrollbar()
+    def update_grid(self, num_columns):
+        """Update the grid configuration and reposition buttons."""
+        for i in range(self.max_columns):
+            self.grid_columnconfigure(i, weight=0)
+        for i in range(num_columns):
+            self.grid_columnconfigure(i, weight=1)
+        self.refresh_div()
     def add_blank_div(self):
         new_uuid = uuid.uuid1()
         div_name = f"div_{new_uuid}"
         logger.info(f"Add {div_name}")
+        items_len = len(ConfigManager().keyboard_bindings.items())
+        self.next_empty_row = items_len // self.max_columns
+        self.next_empty_column = items_len % self.max_columns        
         div = self.create_div(row=self.next_empty_row,
+                              column=self.next_empty_column,
                               div_name=div_name,
                               gesture_name="None",
                               bind_info=["keyboard", "None", 0.5, "hold", 0.3])
 
         self.divs[div_name] = div
-        self.next_empty_row += 1
+        # self.next_empty_row += 1
         self.refresh_scrollbar()
 
     def remove_keybind(self, selected_key_action, selected_gesture):
@@ -139,7 +184,8 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
         self.remove_keybind(div["selected_key_action"], div["selected_gesture"])
 
         self.divs.pop(div_name)
-        self.refresh_scrollbar()
+        self.refresh_div()
+        # self.refresh_scrollbar()
 
     def remove_div(self, div_name):
         logger.info(f"Remove {div_name}")
@@ -152,7 +198,7 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
                 widget.grid_forget()
                 widget.destroy()
 
-    def create_div(self, row: int, div_name: str, gesture_name: str,
+    def create_div(self, row: int, column: int, div_name: str, gesture_name: str,
                    bind_info: list):
         _, key_action, thres, _, time_thres = bind_info
 
@@ -171,7 +217,7 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
                            partial(self.bin_button_callback, div_name))
 
         remove_button.grid(row=row,
-                           column=0,
+                           column=column,
                            padx=(142, 0),
                            pady=(18, 10),
                            sticky="nw")
@@ -191,7 +237,7 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
             partial(self.button_click_callback, div_name, entry_field))
 
         entry_field.grid(row=row,
-                         column=0,
+                         column=column,
                          padx=PAD_X,
                          pady=(10, 10),
                          sticky="nw")
@@ -205,7 +251,7 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
             fg_color='lightblue'
         )
 
-        button.grid(row=row, column=0, padx=PAD_X, pady=(64, 10), sticky="nw")
+        button.grid(row=row, column=column, padx=PAD_X, pady=(64, 10), sticky="nw")
 
         # Label ?
         tips_label = customtkinter.CTkLabel(master=self,
@@ -216,7 +262,7 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
                                             justify='left')
         tips_label.cget("font").configure(size=12)
         tips_label.grid(row=row,
-                        column=0,
+                        column=column,
                         padx=PAD_X,
                         pady=(92, 10),
                         sticky="nw")
@@ -230,7 +276,7 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
         )
 
         volume_bar.grid(row=row,
-                        column=0,
+                        column=column,
                         padx=PAD_X,
                         pady=(122, 10),
                         sticky="nw")
@@ -253,7 +299,7 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
                     partial(self.slider_mouse_up_callback, div_name))
 
         slider.grid(row=row,
-                    column=0,
+                    column=column,
                     padx=PAD_X - 5,
                     pady=(142, 10),
                     sticky="nw")
@@ -267,7 +313,7 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
                                               justify=tk.LEFT)
         subtle_label.cget("font").configure(size=11)
         subtle_label.grid(row=row,
-                          column=0,
+                          column=column,
                           padx=PAD_X,
                           pady=(158, 10),
                           sticky="nw")
@@ -290,7 +336,7 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
                     partial(self.timer_slider_mouse_up_callback, div_name))
 
         timer_slider.grid(row=row,
-                    column=0,
+                    column=column,
                     padx=PAD_X - 5,
                     pady=(186, 10),
                     sticky="nw")
@@ -304,7 +350,7 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
                                               justify=tk.LEFT)
         timer_label.cget("font").configure(size=11)
         timer_label.grid(row=row,
-                          column=0,
+                          column=column,
                           padx=PAD_X,
                           pady=(202, 10),
                           sticky="nw")
@@ -321,7 +367,7 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
         )
         blink_threshold_slider.set(thres)  # Set initial value based on current threshold
         blink_threshold_slider.grid(row=row,
-                                    column=0,
+                                    column=column,
                                     padx=PAD_X - 5,
                                     pady=(200, 10),  # Adjust padding as needed
                                     sticky="nw")
@@ -337,7 +383,7 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
                                                        state="normal",
                                                        )
         trigger_dropdown.grid(row=row,
-                              column=0,
+                              column=column,
                               padx=PAD_X,
                               pady=(225, 10),
                               sticky="nw")
@@ -607,12 +653,12 @@ class PageKeyboard(SafeDisposableFrame):
 
         # Description.
         des_txt = "Select a facial gesture that you would like to bind to a specific keyboard key. Sensitivity allows you to control the extent to which you need to gesture to trigger the keyboard key press"
-        des_label = customtkinter.CTkLabel(master=self,
+        self.des_label = customtkinter.CTkLabel(master=self,
                                            text=des_txt,
-                                           wraplength=300,
+                                           wraplength=350,
                                            justify=tk.LEFT)  #
-        des_label.cget("font").configure(size=14)
-        des_label.grid(row=1, column=0, padx=20, pady=(10, 40), sticky="nw")
+        self.des_label.cget("font").configure(size=14)
+        self.des_label.grid(row=1, column=0, padx=20, pady=(10, 40), sticky="nw")
 
         # Inner frame
         self.inner_frame = FrameSelectKeyboard(
@@ -631,7 +677,6 @@ class PageKeyboard(SafeDisposableFrame):
                                      padx=5,
                                      pady=5,
                                      sticky="nw")
-
     def enter(self):
         super().enter()
         self.inner_frame.enter()

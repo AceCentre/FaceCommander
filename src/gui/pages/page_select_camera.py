@@ -54,7 +54,7 @@ class PageSelectCamera(SafeDisposableFrame):
                                      width=CANVAS_WIDTH,
                                      height=CANVAS_HEIGHT)
         self.canvas.grid(row=1,
-                         column=1,
+                         column=0,
                          padx=(10, 50),
                          pady=10,
                          sticky="e",
@@ -118,13 +118,20 @@ class PageSelectCamera(SafeDisposableFrame):
         ConfigManager().apply_config()
         self.prev_radio_value = new_radio_value
 
+    def switch_raw_debug(self, device_props):
+        self.device_props = device_props
+
     def page_loop(self):
         if self.is_destroyed:
             return
 
         if self.is_active:
-
-            frame_rgb = CameraManager().get_raw_frame()
+            if self.device_props == "small":
+                frame_rgb = CameraManager().get_debug_frame()
+            else:
+                frame_rgb = CameraManager().get_raw_frame()
+            
+            
             # Assign ref to avoid garbage collected
             self.new_photo = ImageTk.PhotoImage(
                 image=Image.fromarray(frame_rgb).resize((CANVAS_WIDTH,

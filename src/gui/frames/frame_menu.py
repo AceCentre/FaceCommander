@@ -8,8 +8,10 @@ from src.gui.pages import (
     PageSelectCamera, PageKeyboard, PageAbout)
 from src.gui.frames.safe_disposable_frame import SafeDisposableFrame
 
+# LIGHT_BLUE = "yellow"
 LIGHT_BLUE = "#F9FBFE"
 BTN_SIZE = 225, 48
+SMALL_BTN_SIZE = 55, 48
 PROF_DROP_SIZE = 220, 40
 
 
@@ -24,7 +26,7 @@ class FrameMenu(SafeDisposableFrame):
         self.configure(fg_color=LIGHT_BLUE)
 
         self.master_callback = master_callback
-
+        self.last_device_props = ''
         self.menu_btn_images = {
             PageSelectCamera.__name__: [
                 customtkinter.CTkImage(
@@ -52,34 +54,75 @@ class FrameMenu(SafeDisposableFrame):
             ]
         }
 
-        # Profile button
-        prof_drop = customtkinter.CTkImage(
-            Image.open("assets/images/prof_drop_head.png"), size=PROF_DROP_SIZE)
-        profile_btn = customtkinter.CTkLabel(
-            master=self,
-            textvariable=ConfigManager().current_profile_name,
-            image=prof_drop,
-            height=42,
-            compound="center",
-            anchor="w",
-            cursor="hand2",
-        )
-        profile_btn.bind("<Button-1>",
-                         partial(self.master_callback, "show_profile_switcher"))
 
-        profile_btn.grid(row=0,
-                         column=0,
-                         padx=35,
-                         pady=10,
-                         ipadx=0,
-                         ipady=0,
-                         sticky="nw",
-                         columnspan=1,
-                         rowspan=1)
 
         self.buttons = {}
-        self.buttons = self.create_tab_btn(self.menu_btn_images, offset=1)
+        self.buttons = self.create_tab_btn(self.menu_btn_images, offset=2)
         self.set_tab_active(PageSelectCamera.__name__)
+    def on_resize(self, props):
+        
+        if props == "small":
+            
+            self.menu_btn_images = {
+                PageSelectCamera.__name__: [
+                    customtkinter.CTkImage(
+                        Image.open("assets/images/menu_btn_camera_icon.png"),
+                        size=SMALL_BTN_SIZE),
+                    customtkinter.CTkImage(
+                        Image.open("assets/images/menu_btn_camera_selected_icon.png"),
+                        size=SMALL_BTN_SIZE)
+                ],
+                PageKeyboard.__name__: [
+                    customtkinter.CTkImage(
+                        Image.open("assets/images/menu_btn_keyboard_icon.png"),
+                        size=SMALL_BTN_SIZE),
+                    customtkinter.CTkImage(
+                        Image.open("assets/images/menu_btn_keyboard_selected_icon.png"),
+                        size=SMALL_BTN_SIZE)
+                ],
+                PageAbout.__name__: [
+                    customtkinter.CTkImage(
+                        Image.open("assets/images/menu_btn_about_icon.png"),
+                        size=SMALL_BTN_SIZE),
+                    customtkinter.CTkImage(
+                        Image.open("assets/images/menu_btn_about_selected_icon.png"),
+                        size=SMALL_BTN_SIZE)
+                ]
+            }
+            # self.buttons = self.create_tab_btn(self.menu_btn_images, offset=1)
+            self.set_tab_active(PageSelectCamera.__name__)
+        else:
+            self.menu_btn_images = {
+                PageSelectCamera.__name__: [
+                    customtkinter.CTkImage(
+                        Image.open("assets/images/menu_btn_camera.png"),
+                        size=BTN_SIZE),
+                    customtkinter.CTkImage(
+                        Image.open("assets/images/menu_btn_camera_selected.png"),
+                        size=BTN_SIZE)
+                ],
+                PageKeyboard.__name__: [
+                    customtkinter.CTkImage(
+                        Image.open("assets/images/menu_btn_keyboard.png"),
+                        size=BTN_SIZE),
+                    customtkinter.CTkImage(
+                        Image.open("assets/images/menu_btn_keyboard_selected.png"),
+                        size=BTN_SIZE)
+                ],
+                PageAbout.__name__: [
+                    customtkinter.CTkImage(
+                        Image.open("assets/images/menu_btn_about.png"),
+                        size=BTN_SIZE),
+                    customtkinter.CTkImage(
+                        Image.open("assets/images/menu_btn_about_selected.png"),
+                        size=BTN_SIZE)
+                ]
+            }
+
+            
+            # self.buttons = self.create_tab_btn(self.menu_btn_images, offset=1)
+            self.set_tab_active(PageSelectCamera.__name__)            
+        self.last_device_props = props
 
     def create_tab_btn(self, btns: dict, offset):
 
