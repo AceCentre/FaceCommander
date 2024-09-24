@@ -23,6 +23,7 @@ pywin32 = { version = "306", markers = "sys_platform == 'win32'" }
 psutil = "^6.0.0"
 pyinstaller = "^6.10.0"
 playsound = "1.2.2"
+pystray = "^0.19.5"
 
 [tool.poetry.dev-dependencies]
 ruff = "^0.0.287"

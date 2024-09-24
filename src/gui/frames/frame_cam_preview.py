@@ -10,6 +10,8 @@ from src.gui.frames.safe_disposable_frame import SafeDisposableFrame
 from playsound import playsound
 from tkinter import messagebox
 from pathlib import Path
+from pystray import Icon, MenuItem, Menu
+from PIL import Image, ImageDraw
 import plistlib
 import threading
 import os
@@ -33,6 +35,12 @@ class FrameCamPreview(SafeDisposableFrame):
         self.grid_columnconfigure(0, weight=1)
         self.configure(fg_color=LIGHT_BLUE)
         self.os_type = platform.system()
+        self.minimize_var = None
+        self.tk_root = master
+        
+        self.tray_icon = None
+        threading.Thread(target=self.create_tray_icon, daemon=True).start()
+
         # Auto-Start Variable
         self.autostart_var = customtkinter.BooleanVar(value=self.check_autostart())
         # Canvas.
@@ -73,7 +81,7 @@ class FrameCamPreview(SafeDisposableFrame):
             variable=Keybinder().is_active,
             command=lambda: [
                 master_callback("toggle_switch", {"switch_status": self.toggle_switch.get()}),
-                self.play_sound()
+                self.face_control()
             ],
             onvalue=1,
             offvalue=0,
@@ -119,6 +127,43 @@ class FrameCamPreview(SafeDisposableFrame):
                                 padx=(100, 0),
                                 pady=30,
                                 sticky="nw")
+        
+        # Toggle label
+        self.minimize_label = customtkinter.CTkLabel(master=self,
+                                                   compound='right',
+                                                   text="Minimize App",
+                                                   text_color="black",
+                                                   justify=tkinter.LEFT)
+        self.minimize_label.cget("font").configure(size=14)
+        self.minimize_label.grid(row=1,
+                               column=0,
+                               padx=(10, 0),
+                               pady=55,
+                               sticky="nw")
+
+        # Toggle switch
+        self.minimize_switch = customtkinter.CTkSwitch(
+            master=self,
+            text="",
+            width=200,
+            border_color="transparent",
+            switch_height=18,
+            switch_width=32,
+            variable=self.minimize_var,
+            command=lambda: [
+                master_callback("minimize_switch", {"switch_status": self.minimize_switch.get()}),
+                self.minimize_app()
+            ],
+            onvalue=1,
+            offvalue=0,
+        )
+
+        self.minimize_switch.grid(row=1,
+                                column=0,
+                                padx=(100, 0),
+                                pady=55,
+                                sticky="nw")
+        
         # Toggle description label
         self.toggle_label = customtkinter.CTkLabel(
             master=self,
@@ -140,6 +185,37 @@ class FrameCamPreview(SafeDisposableFrame):
                                                      anchor=tkinter.NW)
         self.new_photo = None
         self.after(1, self.camera_loop)
+
+    def show_app(self):
+        self.tk_root.deiconify()  # Show the main window
+        Keybinder().set_active(False)
+
+    def quit_app(self, icon, item):
+        self.tray_icon.stop()  # Stop the tray icon
+        self.tk_root.destroy()  # Close the app
+
+    def create_tray_icon(self):
+        # Create an image for the tray icon
+        image = Image.open('assets/images/icon.ico')
+
+        # Define the menu for the tray icon
+        menu = Menu(
+            MenuItem('Pause', lambda: self.show_app()),  # Show the app when clicked
+            MenuItem('Quit', self.quit_app)  # Quit the app when clicked
+        )
+
+        # Create and run the tray icon
+        self.tray_icon = Icon("CustomTkinter App", image, menu=menu)
+        self.tray_icon.run()
+
+    def minimize_app(self):
+        self.minimize_var = not self.minimize_var
+        if self.minimize_var and self.toggle_switch.get():
+            self.tk_root.withdraw()
+    
+    def face_control(self):
+        if self.minimize_var and self.toggle_switch.get():
+            self.tk_root.withdraw()
 
     def add_to_registry(self):
         try:
@@ -237,7 +313,6 @@ class FrameCamPreview(SafeDisposableFrame):
             return False
 
     def toggle_autostart(self):
-        self.play_sound()
         if self.autostart_var.get():
             success = self.enable_autostart()
             if success:
@@ -278,24 +353,6 @@ class FrameCamPreview(SafeDisposableFrame):
         except Exception as e:
             print(f"Disable autostart failed: {e}")
             return False
-                    
-    def play_sound(self):
-        sound_path = 'assets/sounds/notif.mp3'
-        threading.Thread(target=playsound, args=(sound_path,), daemon=True).start()
-
-    def switch_toggled(self):
-        # Play sound when the switch is toggled
-        sound_path = 'assets/sounds/notif.mp3'  # Path to your sound file
-
-        # Check if the sound file exists
-        if os.path.exists(sound_path):
-            playsound(sound_path)  # Play the sound if the file exists
-        else:
-            print(f"Sound file not found: {sound_path}")
-        # Existing functionality
-        self.root_function_callback(
-            "toggle_switch", {"switch_status": self.toggle_switch.get()}
-        )
 
     def camera_loop(self):
         if self.is_destroyed:
