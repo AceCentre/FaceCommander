@@ -13,7 +13,7 @@ from src.update_manager import UpdateManager
 from src.gui import frames
 from src.controllers import Keybinder
 from src.gui.pages import (
-    PageSelectCamera, PageKeyboard, PageAbout)
+    PageSelectCamera, PageKeyboard, PageAbout, PageSetting)
 
 customtkinter.set_appearance_mode("light")
 customtkinter.set_default_color_theme("assets/themes/google_theme.json")
@@ -108,7 +108,8 @@ class MainGui:
         self.pages = [
             PageSelectCamera(master=self.tk_root,),
             PageKeyboard(master=self.tk_root,),
-            PageAbout(tkRoot=self.tk_root, updateHost=self)
+            PageAbout(tkRoot=self.tk_root, updateHost=self),
+            PageSetting(master=self.tk_root,)
         ]
 
         self.current_page_name = None
