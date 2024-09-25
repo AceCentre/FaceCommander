@@ -5,7 +5,7 @@ from PIL import Image
 
 from src.config_manager import ConfigManager
 from src.gui.pages import (
-    PageSelectCamera, PageKeyboard, PageAbout)
+    PageSelectCamera, PageKeyboard, PageAbout, PageSetting)
 from src.gui.frames.safe_disposable_frame import SafeDisposableFrame
 
 # LIGHT_BLUE = "yellow"
@@ -51,7 +51,15 @@ class FrameMenu(SafeDisposableFrame):
                 customtkinter.CTkImage(
                     Image.open("assets/images/menu_btn_about_selected.png"),
                     size=BTN_SIZE)
-            ]
+            ],
+            PageSetting.__name__: [
+                customtkinter.CTkImage(
+                    Image.open("assets/images/menu_btn_setting.png"),
+                    size=BTN_SIZE),
+                customtkinter.CTkImage(
+                    Image.open("assets/images/menu_btn_setting_selected.png"),
+                    size=BTN_SIZE)
+            ],
         }
 
 
@@ -87,7 +95,15 @@ class FrameMenu(SafeDisposableFrame):
                     customtkinter.CTkImage(
                         Image.open("assets/images/menu_btn_about_selected_icon.png"),
                         size=SMALL_BTN_SIZE)
-                ]
+                ],
+                PageSetting.__name__: [
+                    customtkinter.CTkImage(
+                        Image.open("assets/images/menu_btn_setting_icon.png"),
+                        size=SMALL_BTN_SIZE),
+                    customtkinter.CTkImage(
+                        Image.open("assets/images/menu_btn_setting_selected_icon.png"),
+                        size=SMALL_BTN_SIZE)
+                ],
             }
             # self.buttons = self.create_tab_btn(self.menu_btn_images, offset=1)
             self.set_tab_active(PageSelectCamera.__name__)
@@ -116,7 +132,15 @@ class FrameMenu(SafeDisposableFrame):
                     customtkinter.CTkImage(
                         Image.open("assets/images/menu_btn_about_selected.png"),
                         size=BTN_SIZE)
-                ]
+                ],
+                PageSetting.__name__: [
+                    customtkinter.CTkImage(
+                        Image.open("assets/images/menu_btn_setting.png"),
+                        size=BTN_SIZE),
+                    customtkinter.CTkImage(
+                        Image.open("assets/images/menu_btn_setting_selected.png"),
+                        size=BTN_SIZE)
+                ],
             }
 
             

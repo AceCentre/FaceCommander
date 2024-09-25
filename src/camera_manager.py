@@ -182,7 +182,7 @@ class ThreadCameras():
 
         # pick first camera available if camera in config not found
         if init_id not in self.cameras:
-            self.current_id = list(self.cameras.keys())[0]
+            self.current_id = 0
         else:
             self.current_id = init_id
 
