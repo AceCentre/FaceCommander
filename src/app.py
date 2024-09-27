@@ -20,6 +20,7 @@ from platformdirs import user_data_dir
 # Local imports.
 #
 from src.utils.readini import get_ini_value
+import sys
 
 APP_NAME = "FaceCommander"
 APP_AUTHOR = "AceCentre"
@@ -59,7 +60,10 @@ class App(metaclass=Singleton):
         self._includePrereleases = False
 
         # Top-level paths.
-        self._installationRoot = Path(__file__).parents[1]
+        if getattr(sys, 'frozen', False):  # Check if running in PyInstaller bundle
+            self._installationRoot = Path(sys._MEIPASS)
+        else:
+            self._installationRoot = Path(__file__).parents[1]
         self._dataRoot = None
 
         self._version = None
