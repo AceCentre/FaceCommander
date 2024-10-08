@@ -26,7 +26,7 @@ from src.utils.Trigger import Trigger
 CURRENT_PROFILE_FILENAME = "current.json"
 CURSOR_FILENAME = "cursor.json"
 MOUSE_FILENAME = "mouse_bindings.json"
-KEYBOARD_FILENAME = "keyboard_bindings.json"
+FILENAME = "keyboard_bindings.json"
 BACKUP_PROFILE = "default"
 
 logger = logging.getLogger("ConfigManager")
@@ -38,15 +38,15 @@ class ConfigManager(metaclass=Singleton):
         self._currentProfilePath = None
         self._profileNames = None
 
-        self.tempKeyboardBindings = None
+        self.tempBindings = None
         self.tempMouseBindings = None
         self.tempConfig = None
-        self.keyboard_bindings = None
+        self.bindings = None
         self.mouse_bindings = None
         self.cursor_control = False
         self.unsave_configs = False
         self.unsave_mouse_bindings = False
-        self.unsave_keyboard_bindings = False
+        self.unsave_bindings = False
         self.throttle_time = 1.5
         self.config = None
 
@@ -159,9 +159,9 @@ class ConfigManager(metaclass=Singleton):
 
         cursorPath = profileDirectory / CURSOR_FILENAME
         mousePath =  profileDirectory / MOUSE_FILENAME
-        keyboardPath = profileDirectory / KEYBOARD_FILENAME
+        bindingPath = profileDirectory / FILENAME
         missing = tuple(
-            path for path in (cursorPath, mousePath, keyboardPath)
+            path for path in (cursorPath, mousePath, bindingPath)
             if not path.is_file()
         )
         if len(missing) > 0:
@@ -179,12 +179,12 @@ class ConfigManager(metaclass=Singleton):
             self.mouse_bindings = json.load(file)
 
         # Load keyboard bindings
-        with keyboardPath.open() as file:
-            self.keyboard_bindings = json.load(file)
+        with bindingPath.open() as file:
+            self.bindings = json.load(file)
 
         self.tempConfig = copy.deepcopy(self.config)
         self.tempMouseBindings = copy.deepcopy(self.mouse_bindings)
-        self.tempKeyboardBindings = copy.deepcopy(self.keyboard_bindings)
+        self.tempBindings = copy.deepcopy(self.bindings)
 
         self.currentProfileDirectory = profileDirectory
         self.current_profile_name.set(name)
@@ -259,7 +259,7 @@ class ConfigManager(metaclass=Singleton):
 
     # ------------------------------ KEYBOARD BINDINGS CONFIG ----------------------------- #
 
-    def set_temp_keyboard_binding(self, device: str, key_action: str,
+    def set_temp_binding(self, device: str, key_action: str,
                                   gesture: str, threshold: float,
                                   trigger: Trigger, time_threshold: float):
         logger.info(
@@ -267,53 +267,53 @@ class ConfigManager(metaclass=Singleton):
             gesture, device, key_action, threshold, trigger.value, time_threshold)
 
         # Remove duplicate keybindings
-        self.remove_temp_keyboard_binding(device, key_action, gesture)
+        self.remove_temp_binding(device, key_action, gesture)
 
         # Assign
-        self.tempKeyboardBindings[gesture] = [
+        self.tempBindings[gesture] = [
             device, key_action,
             float(threshold), trigger.value, time_threshold
         ]
-        self.unsave_keyboard_bindings = True
+        self.unsave_bindings = True
 
-    def remove_temp_keyboard_binding(self,
-                                     device: str,
-                                     key_action: str = "None",
-                                     gesture: str = "None"):
+    def remove_temp_binding(self,
+                            device: str,
+                            key_action: str = "None",
+                            gesture: str = "None"):
         """Remove binding from config by providing either key_action or gesture.
         """
 
         logger.info(
-            f"remove_temp_keyboard_binding for device: {device}, key: {key_action} or gesture {gesture}"
+            f"remove_temp_binding for device: {device}, key: {key_action} or gesture {gesture}"
         )
 
-        out_keybindings = {}
-        for ges, vals in self.tempKeyboardBindings.items():
+        out_bindings = {}
+        for ges, vals in self.tempBindings.items():
             if gesture == ges:
                 continue
             if key_action == vals[1]:
                 continue
 
-            out_keybindings[ges] = vals
+            out_bindings[ges] = vals
 
-        self.tempKeyboardBindings = out_keybindings
+        self.tempBindings = out_bindings
 
-        self.unsave_keyboard_bindings = True
+        self.unsave_bindings = True
         return
 
-    def apply_keyboard_bindings(self):
-        logger.info("Applying keyboard bindings")
+    def apply_bindings(self):
+        logger.info("Applying bindings")
 
-        self.keyboard_bindings = copy.deepcopy(self.tempKeyboardBindings)
-        self.write_keyboard_bindings_file()
-        self.unsave_keyboard_bindings = False
+        self.bindings = copy.deepcopy(self.tempBindings)
+        self.write_bindings_file()
+        self.unsave_bindings = False
 
-    def write_keyboard_bindings_file(self):
-        keyboardPath = Path(self.currentProfileDirectory, KEYBOARD_FILENAME)
-        logger.info(f"Writing keyboard bindings file {keyboardPath}")
+    def write_bindings_file(self):
+        bindingPath = Path(self.currentProfileDirectory, FILENAME)
+        logger.info(f"Writing bindings file {bindingPath}")
 
-        with keyboardPath.open('w') as file:
-            out_json = dict(sorted(self.keyboard_bindings.items()))
+        with bindingPath.open('w') as file:
+            out_json = dict(sorted(self.bindings.items()))
             json.dump(out_json, file, indent=4, separators=(', ', ': '))
     
     # ------------------------------Cursor Control Page-------------------------------------- #
@@ -327,7 +327,7 @@ class ConfigManager(metaclass=Singleton):
     def apply_all(self):
         self.apply_config()
         self.apply_mouse_bindings()
-        self.apply_keyboard_bindings()
+        self.apply_bindings()
 
     def destroy(self):
         logger.info("Destroy")

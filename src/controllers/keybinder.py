@@ -32,7 +32,7 @@ class Keybinder(metaclass=Singleton):
         self.screen_w = None
         logger.info("Initialize Keybinder singleton")
         self.top_count = 0
-        self.blink_count = 0
+        self.blink_count = {"Eye blink right": 0, "Eye blink left": 0, "Eye blink": 0}
         self.start_hold_ts = {} 
         self.holding = {}
         self.is_started = False
@@ -59,7 +59,7 @@ class Keybinder(metaclass=Singleton):
         self.last_act_time = {}
         self.start_hold_ts = {}
         for _, v in (ConfigManager().mouse_bindings |
-                     ConfigManager().keyboard_bindings).items():
+                     ConfigManager().bindings).items():
             state_name = v[0]+"_"+v[1]
             self.key_states[state_name] = False
             self.last_act_time[state_name] = int(time.time() * 1000)
@@ -70,7 +70,7 @@ class Keybinder(metaclass=Singleton):
 
         self.last_know_keybindings = copy.deepcopy(
             (ConfigManager().mouse_bindings |
-             ConfigManager().keyboard_bindings))
+             ConfigManager().bindings))
 
     def get_monitors(self) -> list[dict]:
         out_list = []
@@ -154,6 +154,7 @@ class Keybinder(metaclass=Singleton):
 
         if self.last_act_time[state_name] > int(time.time() * 1000) - ConfigManager().get_throttle_time() * 1000:
             return
+
         if mode == Trigger.SINGLE:
             if val > threshold:
                 if self.key_states[state_name] is False:
@@ -338,13 +339,12 @@ class Keybinder(metaclass=Singleton):
 
         if blendshape_values is None:
             return
-
         if (ConfigManager().mouse_bindings |
-            ConfigManager().keyboard_bindings) != self.last_know_keybindings:
+            ConfigManager().bindings) != self.last_know_keybindings:
             self.init_states()
 
         for shape_name, v in (ConfigManager().mouse_bindings |
-                              ConfigManager().keyboard_bindings).items():
+                              ConfigManager().bindings).items():
 
             if shape_name not in shape_list.blendshape_names:
                 continue
@@ -354,28 +354,22 @@ class Keybinder(metaclass=Singleton):
             # Get blendshape value
             idx = shape_list.blendshape_indices[shape_name]
             val = blendshape_values[idx]
-    
             if device == "meta":
                 self.meta_action(val, action, threshold, self.is_active.get())
             
             if self.is_active.get():
                 if "blink" in shape_name:
                     if val > threshold:
-                        self.blink_count += 1
-                        if self.blink_count < max(time_threshold*100, 1)*2: continue 
-                        '''
-                        Max value of max(time_threshold*100, 1)*2: 200. uuu
-                        Number 200 means 200 frames. When 200 frames, it takes about 1s.
-                        '''
-                    else: self.blink_count = 0
+                        self.blink_count[shape_name] += 1
+                        if self.blink_count[shape_name] < max(time_threshold*5, 1)*2: continue 
+                    else: self.blink_count[shape_name] = 0
             
                 if device == "mouse":
                     self.mouse_action(val, action, threshold, mode)
             
                 elif device == "keyboard":
                     self.keyboard_action(val, action, threshold, mode)
-                self.blink_count = 0
-                
+                self.blink_count[shape_name] = 0
 
     def set_active(self, flag: bool) -> None:
         self.is_active.set(flag)

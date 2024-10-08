@@ -11,6 +11,7 @@ from src.config_manager import ConfigManager
 from src.detectors import FaceMesh
 from src.gui.balloon import Balloon
 from src.gui.select_facial_gesture import Select_Facial_Gesture
+from src.gui.select_binding_type import Select_binding_type
 from src.gui.frames.safe_disposable_frame import SafeDisposableFrame
 from src.gui.frames.safe_disposable_scrollable_frame import SafeDisposableScrollableFrame
 from src.utils.Trigger import Trigger
@@ -56,7 +57,7 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
             self, image_path="assets/images/balloon.png")
         
         self.shared_dialog = Select_Facial_Gesture(self, shape_list.available_gestures, width=650, callback=self.dialog_callback)
-
+        self.binding_dialog = Select_binding_type(self, width=400, callback=self.select_type)
         self.help_icon = customtkinter.CTkImage(
             Image.open("assets/images/help.png").resize(HELP_ICON_SIZE),
             size=HELP_ICON_SIZE)
@@ -88,15 +89,18 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
 
         # Divs
         self.divs = {}
-        self.load_initial_keybindings()
+        self.load_initial_bindings()
 
         self.bind("<Configure>", self.on_resize)
 
-    def load_initial_keybindings(self):
+    def select_type(self, type, key_action):
+        self.add_blank_div(type, key_action)
+
+    def load_initial_bindings(self):
         """Load default from config and set the UI
         """
         
-        for idx, (gesture_name, bind_info) in enumerate(ConfigManager().keyboard_bindings.items()):
+        for idx, (gesture_name, bind_info) in enumerate(ConfigManager().bindings.items()):
             div_name = f"div_{self.next_empty_row}_{self.next_empty_column}"
             new_uuid = uuid.uuid1()
             div_name = f"div_{new_uuid}"
@@ -107,7 +111,8 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
 
             # Show elements related to gesture
             div["selected_gesture"] = gesture_name
-            div["entry_field"].configure(image=self.blank_a_button_image)
+            if div['type'] == 'keyboard':
+                div["entry_field"].configure(image=self.blank_a_button_image)
             div["slider"].set(int(bind_info[2] * 100))
             div["tips_label"].grid()
             div["subtle_label"].grid()
@@ -159,35 +164,35 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
         for i in range(num_columns):
             self.grid_columnconfigure(i, weight=1)
         self.refresh_div()
-    def add_blank_div(self):
+    def add_blank_div(self, type, key_action):
         new_uuid = uuid.uuid1()
         div_name = f"div_{new_uuid}"
         logger.info(f"Add {div_name}")
-        items_len = len(ConfigManager().keyboard_bindings.items())
+        items_len = len(ConfigManager().bindings.items()) + len(ConfigManager().mouse_bindings.items())
         self.next_empty_row = items_len // self.max_columns
-        self.next_empty_column = items_len % self.max_columns        
+        self.next_empty_column = items_len % self.max_columns
         div = self.create_div(row=self.next_empty_row,
                               column=self.next_empty_column,
                               div_name=div_name,
                               gesture_name="None",
-                              bind_info=["keyboard", "None", 0.5, "hold", 0.3])
+                              bind_info=[type, key_action, 0.5, "hold", 0.3])
 
         self.divs[div_name] = div
         # self.next_empty_row += 1
         self.refresh_scrollbar()
 
-    def remove_keybind(self, selected_key_action, selected_gesture):
+    def remove_keybind(self, selected_type, selected_key_action, selected_gesture):
         logger.info(f"Remove keyboard binding {selected_key_action}")
-        ConfigManager().remove_temp_keyboard_binding(
-            device="keyboard",
+        ConfigManager().remove_temp_binding(
+            device=selected_type,
             key_action=selected_key_action,
             gesture=selected_gesture)
-        ConfigManager().apply_keyboard_bindings()
+        ConfigManager().apply_bindings()
 
     def bin_button_callback(self, div_name, event):
         div = self.divs[div_name]
         self.remove_div(div_name)
-        self.remove_keybind(div["selected_key_action"], div["selected_gesture"])
+        self.remove_keybind(div["type"], div["selected_key_action"], div["selected_gesture"])
 
         self.divs.pop(div_name)
         self.refresh_div()
@@ -206,8 +211,7 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
 
     def create_div(self, row: int, column: int, div_name: str, gesture_name: str,
                    bind_info: list):
-        _, key_action, thres, _, time_thres = bind_info
-
+        type, key_action, thres, _, time_thres = bind_info
         # Bin button
         remove_button = customtkinter.CTkButton(master=self,
                                                 text="",
@@ -222,26 +226,46 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
         remove_button.bind("<ButtonRelease-1>",
                            partial(self.bin_button_callback, div_name))
 
-        remove_button.grid(row=row,
-                           column=column,
-                           padx=(142, 0),
-                           pady=(18, 10),
-                           sticky="nw")
-
         # Key entry
-        field_txt = "" if key_action == "None" else key_action
-        entry_field = customtkinter.CTkLabel(master=self,
-                                             text=field_txt,
-                                             image=self.a_button_image,
-                                             width=A_BUTTON_SIZE[0],
-                                             height=A_BUTTON_SIZE[1],
-                                             cursor="hand2")
-        entry_field.cget("font").configure(size=17)
-
-        entry_field.bind(
-            "<ButtonRelease-1>",
-            partial(self.button_click_callback, div_name, entry_field))
-
+        if type == 'keyboard':
+            field_txt = "" if key_action == "None" else key_action
+            entry_field = customtkinter.CTkLabel(master=self,
+                                                text=field_txt,
+                                                image=self.a_button_image,
+                                                width=A_BUTTON_SIZE[0],
+                                                height=A_BUTTON_SIZE[1],
+                                                cursor="hand2")
+            entry_field.cget("font").configure(size=17)
+            entry_field.bind("<ButtonRelease-1>", partial(self.button_click_callback, div_name, entry_field))
+            remove_button.grid(row=row,
+                            column=column,
+                            padx=(142, 0),
+                            pady=(18, 10),
+                            sticky="nw")
+        else:
+            if key_action == 'left':
+                field_txt = 'Mouse left click'
+            if key_action == 'right':
+                field_txt = 'Mouse right click'
+            if key_action == 'pause':
+                field_txt = 'Mouse pause / unpause'
+            if key_action == 'reset':
+                field_txt = 'Reset cursor to center'
+            if key_action == 'middle':
+                field_txt = 'Mouse middle click'
+            if key_action == 'cycle':
+                field_txt = 'Switch focus between monitors'
+            entry_field = customtkinter.CTkLabel(master=self,
+                                                text=field_txt,
+                                                width=A_BUTTON_SIZE[0],
+                                                height=A_BUTTON_SIZE[1],
+                                                cursor="hand2")
+            entry_field.cget("font").configure(size=13)
+            remove_button.grid(row=row,
+                            column=column,
+                            padx=(250, 0),
+                            pady=(18, 10),
+                            sticky="nw")
         entry_field.grid(row=row,
                          column=column,
                          padx=PAD_X,
@@ -412,6 +436,7 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
         trigger_label.grid_remove()
 
         return {
+            "type": type,
             "entry_field": entry_field,
             "gesture_button": button,
             "tips_label": tips_label,
@@ -428,35 +453,38 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
             "blink_threshold_slider": blink_threshold_slider
         }
 
+    def open_binding_dialog(self):
+        self.binding_dialog.open()
+
     def open_facial_gesture(self, div_name):
-        self.used_gestures = list(ConfigManager().keyboard_bindings.keys()) + list(ConfigManager().mouse_bindings.keys())
+        self.used_gestures = list(ConfigManager().bindings.keys()) + list(ConfigManager().mouse_bindings.keys())
         # Open custom dialog and set callback for selection
         self.shared_dialog.open(div_name, self.used_gestures)
 
-    def set_new_keyboard_binding(self, div):
+    def set_new_binding(self, div):
 
         # Remove keybind if set to invalid key
         if (div["selected_gesture"] == "None") or (div["selected_key_action"]
                                                    == "None"):
-            logger.info(f"Remove keyboard binding {div['selected_key_action']}")
-            ConfigManager().remove_temp_keyboard_binding(
-                device="keyboard", gesture=div["selected_gesture"])
+            logger.info(f"Remove binding {div['selected_key_action']}")
+            ConfigManager().remove_temp_binding(
+                device=div["type"], gesture=div["selected_gesture"])
 
-            ConfigManager().apply_keyboard_bindings()
+            ConfigManager().apply_bindings()
             return
 
         # Set the keybinding
         thres_value = div["slider"].get() / 100
         time_thres_value = div["timer_slider"].get() / 100
         trigger = Trigger(div["trigger_dropdown"].get())
-        ConfigManager().set_temp_keyboard_binding(
-            device="keyboard",
+        ConfigManager().set_temp_binding(
+            device=div["type"],
             key_action=div["selected_key_action"],
             gesture=div["selected_gesture"],
             threshold=thres_value,
             trigger=trigger,
             time_threshold=time_thres_value)
-        ConfigManager().apply_keyboard_bindings()
+        ConfigManager().apply_bindings()
 
     def wait_for_key(self, div_name: str, entry_button, keydown: tk.Event):
         """Wait for user to press any key then set the config
@@ -489,7 +517,7 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
             div["tips_label"].grid_remove()
             div["subtle_label"].grid_remove()
             div["trigger_dropdown"].grid_remove()
-            self.set_new_keyboard_binding(div)
+            self.set_new_binding(div)
 
         # Valid key
         else:
@@ -502,7 +530,7 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
 
             div["gesture_button"].grid()
             div["selected_key_action"] = pydirectinput_key
-            self.set_new_keyboard_binding(div)
+            self.set_new_binding(div)
             if div["selected_gesture"] != "None":
                 div["slider"].grid()
                 div["gesture_button"].grid()
@@ -567,7 +595,7 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
             div["subtle_label"].grid_remove()
             div["trigger_dropdown"].grid_remove()
 
-        self.set_new_keyboard_binding(div)
+        self.set_new_binding(div)
         self.refresh_scrollbar()  
 
     def slider_drag_callback(self, div_name: str, new_value: str):
@@ -596,11 +624,11 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
 
         self.slider_dragging = False
         div = self.divs[div_name]
-        self.set_new_keyboard_binding(div)
+        self.set_new_binding(div)
     def timer_slider_mouse_up_callback(self, div_name: str, event):
         self.slider_dragging = False
         div = self.divs[div_name]
-        self.set_new_keyboard_binding(div)        
+        self.set_new_binding(div)        
     def update_volume_preview(self):
 
         bs = FaceMesh().get_blendshapes()
@@ -646,7 +674,7 @@ class FrameSelectKeyboard(SafeDisposableScrollableFrame):
         self.divs = {}
 
         # Create new divs form the new profile
-        self.load_initial_keybindings()
+        self.load_initial_bindings()
 
     def enter(self):
         super().enter()
@@ -673,7 +701,7 @@ class PageKeyboard(SafeDisposableFrame):
 
         # Top label.
         self.top_label = customtkinter.CTkLabel(master=self,
-                                                text="Keyboard binding")
+                                                text="Keyboard & Mouse binding")
         self.top_label.cget("font").configure(size=24)
         self.top_label.grid(row=0,
                             column=0,
@@ -683,7 +711,7 @@ class PageKeyboard(SafeDisposableFrame):
                             columnspan=1)
 
         # Description.
-        des_txt = "Select a facial gesture that you would like to bind to a specific keyboard key. Sensitivity allows you to control the extent to which you need to gesture to trigger the keyboard key press"
+        des_txt = "Select a facial gesture that you would like to bind to a specific keyboard key and mouse event. Sensitivity allows you to control the extent to which you need to gesture to trigger the keyboard key press and mouse event"
         self.des_label = customtkinter.CTkLabel(master=self,
                                            text=des_txt,
                                            wraplength=350,
@@ -702,20 +730,20 @@ class PageKeyboard(SafeDisposableFrame):
             text="+ Add binding",
             fg_color="white",
             text_color=BLUE,
-            command=self.inner_frame.add_blank_div)
+            command=self.inner_frame.open_binding_dialog)
         self.add_binding_button.grid(row=2,
                                      column=0,
                                      padx=5,
                                      pady=5,
                                      sticky="nw")
         
-        self.top_label = customtkinter.CTkLabel(master=self,
-                                                text="Press a key for it to detect the key")
-        self.top_label.grid(row=3,
-                            column=0,
-                            padx=55,
-                            pady=5,
-                            sticky="nw",)
+        # self.top_label = customtkinter.CTkLabel(master=self,
+        #                                         text="Press a key for it to detect the key")
+        # self.top_label.grid(row=3,
+        #                     column=0,
+        #                     padx=55,
+        #                     pady=5,
+        #                     sticky="nw",)
     def enter(self):
         super().enter()
         self.inner_frame.enter()

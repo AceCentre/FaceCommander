@@ -20,7 +20,7 @@ class FrameMenu(SafeDisposableFrame):
     def __init__(self, master, master_callback: callable, **kwargs):
         super().__init__(master, **kwargs)
 
-        self.grid_rowconfigure(7, weight=1)
+        self.grid_rowconfigure(6, weight=1)
         self.grid_columnconfigure(0, weight=1)
         self.grid_propagate(False)
         self.configure(fg_color=LIGHT_BLUE)
@@ -36,14 +36,14 @@ class FrameMenu(SafeDisposableFrame):
                     Image.open("assets/images/menu_btn_camera_selected.png"),
                     size=BTN_SIZE)
             ],
-            PageSelectGestures.__name__: [
-                customtkinter.CTkImage(
-                    Image.open("assets/images/menu_btn_gestures.png"),
-                    size=BTN_SIZE),
-                customtkinter.CTkImage(
-                    Image.open("assets/images/menu_btn_gestures_selected.png"),
-                    size=BTN_SIZE)
-            ],
+            # PageSelectGestures.__name__: [
+            #     customtkinter.CTkImage(
+            #         Image.open("assets/images/menu_btn_gestures.png"),
+            #         size=BTN_SIZE),
+            #     customtkinter.CTkImage(
+            #         Image.open("assets/images/menu_btn_gestures_selected.png"),
+            #         size=BTN_SIZE)
+            # ],
             PageKeyboard.__name__: [
                 customtkinter.CTkImage(
                     Image.open("assets/images/menu_btn_keyboard.png"),
@@ -103,14 +103,14 @@ class FrameMenu(SafeDisposableFrame):
                 ]
 
             # Add the remaining menu items
-            self.menu_btn_images[PageSelectGestures.__name__] = [
-                customtkinter.CTkImage(
-                    Image.open("assets/images/menu_btn_gestures_icon.png"),
-                    size=SMALL_BTN_SIZE),
-                customtkinter.CTkImage(
-                    Image.open("assets/images/menu_btn_gestures_selected_icon.png"),
-                    size=SMALL_BTN_SIZE)
-            ]
+            # self.menu_btn_images[PageSelectGestures.__name__] = [
+            #     customtkinter.CTkImage(
+            #         Image.open("assets/images/menu_btn_gestures_icon.png"),
+            #         size=SMALL_BTN_SIZE),
+            #     customtkinter.CTkImage(
+            #         Image.open("assets/images/menu_btn_gestures_selected_icon.png"),
+            #         size=SMALL_BTN_SIZE)
+            # ]
 
             self.menu_btn_images[PageKeyboard.__name__] = [
                 customtkinter.CTkImage(
@@ -153,7 +153,7 @@ class FrameMenu(SafeDisposableFrame):
             ]
 
             if not ConfigManager().get_cursor_control():
-                self.grid_rowconfigure(7, weight=1)
+                self.grid_rowconfigure(6, weight=1)
                 self.menu_btn_images[PageCursor.__name__] = [
                     customtkinter.CTkImage(
                         Image.open("assets/images/menu_btn_cursor.png"),
@@ -164,14 +164,14 @@ class FrameMenu(SafeDisposableFrame):
                 ]
 
             # Add the remaining menu items
-            self.menu_btn_images[PageSelectGestures.__name__] = [
-                customtkinter.CTkImage(
-                    Image.open("assets/images/menu_btn_gestures.png"),
-                    size=BTN_SIZE),
-                customtkinter.CTkImage(
-                    Image.open("assets/images/menu_btn_gestures_selected.png"),
-                    size=BTN_SIZE)
-            ]
+            # self.menu_btn_images[PageSelectGestures.__name__] = [
+            #     customtkinter.CTkImage(
+            #         Image.open("assets/images/menu_btn_gestures.png"),
+            #         size=BTN_SIZE),
+            #     customtkinter.CTkImage(
+            #         Image.open("assets/images/menu_btn_gestures_selected.png"),
+            #         size=BTN_SIZE)
+            # ]
 
             self.menu_btn_images[PageKeyboard.__name__] = [
                 customtkinter.CTkImage(
