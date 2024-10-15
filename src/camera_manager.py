@@ -180,16 +180,11 @@ class ThreadCameras():
 
         init_id = ConfigManager().config["camera_id"]
 
-        # pick first camera available if camera in config not found
-        if not self.cameras:
-            logger.warning("No cameras available.")
-            self.current_id = 0  # Or set to a default value or raise an exception
+        # Pick first camera available if camera in config not found
+        if init_id not in self.cameras:
+            self.current_id = list(self.cameras.keys())[0]
         else:
-            # Pick first camera available if camera in config not found
-            if init_id not in self.cameras:
-                self.current_id = list(self.cameras.keys())[0]
-            else:
-                self.current_id = init_id
+            self.current_id = init_id
 
         logger.info(f"Try to use camera {self.current_id}")
         self.pick_camera(self.current_id)
